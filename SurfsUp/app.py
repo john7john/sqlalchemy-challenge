@@ -56,8 +56,7 @@ def homepage():
 
 @app.route("/api/v1.0/precipitation")
 def precipitation():
-    
-    
+        
     session = Session(engine)
     
     #year ago date
@@ -106,4 +105,68 @@ def tobs():
     
     session = Session(engine)
     
-  
+    #Year ago date
+    year_ago_date = dt.date(2017,8,23) - dt.timedelta(days = 365)
+    
+    # Preform a query to retrieve the dates and temperature observations of the most active station for the previous year of data
+    active_station = session.query(measurement.date, measurement.tobs).filter(measurement.station == 'USC00519281').\
+                            filter(measurement.date >= year_ago_date).all()
+                                                        
+    session.close()
+    
+    # most_active
+    most_active = []
+    for date, temp in active_station:
+        active_dict = {}
+        active_dict[date] = temp
+        most_active.append(active_dict)
+        
+    return jsonify(most_active)
+
+@app.route("/api/v1.0/<start>")
+def start(start):
+    
+    session = Session(engine)
+    
+    # Retrieve the minimum, maximum, and average temperature for a specified start date to the end of the dataset
+    query_results = session.query(func.min(measurement.tobs), func.max(measurement.tobs), func.avg(measurement.tobs)).\
+            filter(measurement.date >= start).all()
+    
+                                                     
+    session.close()
+    
+    # Create a dictionary from the row data and append to list start_date
+    start_date = []
+    for min, max, avg in query_results:
+        start_dict = {}
+        start_dict["Minimum Temperature"] = min
+        start_dict["Maxium Temperature"] = max
+        start_dict["Average Temperature"] = avg
+        start_date.append(start_dict)
+        
+    return jsonify(start_date)
+
+@app.route("/api/v1.0/<start>/<end>")
+def range_date(start,end):
+    
+    session = Session(engine)
+    
+    # Retrieve the minimum, maximum, and average temperature for a between given dates
+    query_results = session.query(func.min(measurement.tobs), func.max(measurement.tobs), func.avg(measurement.tobs)).\
+            filter(measurement.date >= start).filter(measurement.date <= end).all()
+                                                        
+    session.close()
+    
+    # Create a dictionary from the row data and append to list range_date
+    range_date = []
+    for min, max, avg in query_results:
+        range_dict = {}
+        range_dict["Minimum Temperature"] = min
+        range_dict["Maxium Temperature"] = max
+        range_dict["Average Temperature"] = avg
+        range_date.append(range_dict)
+        
+    return jsonify(range_date)
+    
+if __name__ == '__main__':
+    app.run(debug=True)
